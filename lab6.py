@@ -9,7 +9,6 @@ import multiprocessing as mp
 
 def square(num):
     print(f"Square: {num*num}")
-    #print thread number
     print(f"Thread ID (square): {threading.get_ident()}")
 
 def cube(num):
