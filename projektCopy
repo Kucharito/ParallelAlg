@@ -1,0 +1,115 @@
+def load_data():
+    path="Y-10_t.txt"
+    with open(path) as f:
+        lines = f.readlines()
+        number_of_items = int(lines[0]) # pocet zariadeni
+        print(number_of_items)
+        widths = lines[1]
+        #print(widths)
+        widths = [int (x) for x in widths.split()] # sirka zariadeni "10 20 30" -> [10,20,30]
+        tmp = lines[2:(2+number_of_items)]  # horny trojuholnik matice vzdialenosti od riadku 2 do 12, vsetky cisla
+        data = []
+        for line in tmp:
+            row = []
+            parts = line.split()
+            for part in parts:
+                row.append(float(part))
+            data.append(row)
+
+    #doplnenie dolnej casti matice podla symetrie
+    n = len(data)
+    for i in range(n):
+        for j in range(i+1,n):
+            data[j][i] = data[i][j]
+
+    for row in data:
+        print(row)
+    return [widths, data]
+
+
+
+
+def cost(permutation, widths, data):
+    total_cost = 0.0
+    n = len(permutation)
+    centers = []
+    position = 0
+
+    for idx in permutation:
+        center = position + widths[idx] / 2
+        centers.append(center)
+        position += widths[idx]
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            dist = abs(centers[j] - centers[i])
+            total_cost += data[permutation[i]][permutation[j]] * dist
+
+    return total_cost
+
+def partial_cost(partial_perm, widths, data):
+    cost = 0.0
+    n = len(partial_perm)
+    centers = []
+    position = 0
+
+    for idx in partial_perm:
+        center = position + widths[idx] / 2
+        centers.append(center)
+        position += widths[idx]
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            dist = abs(centers[j] - centers[i])
+            cost += data[partial_perm[i]][partial_perm[j]] * dist
+
+    return cost
+
+def lower_bound(partial_perm, widths, data, best_cost):
+    n = len(widths)
+    placed = set(partial_perm)
+    remaining = [i for i in range(n) if i not in placed]
+
+    #cena umiestnenych zariadeni
+    lb = partial_cost(partial_perm, widths, data)
+
+    if remaining:
+        min_width = min([widths[i] for i in remaining])
+        max_data = max([data[i][j] for i in remaining for j in remaining if i != j])
+        optimistic_remaining = max_data * min_width *len(remaining)
+        lb += optimistic_remaining
+
+    return lb
+
+
+def branch_and_bound(partial_perm, widths,data, best_cost , best_perm):
+    n = len(widths)
+    if(len(partial_perm) == n):
+        current_cost = cost(partial_perm, widths, data)
+        if current_cost < best_cost[0]:
+            best_cost[0] = current_cost
+            best_perm[0] = partial_perm.copy()
+            print("New best cost: ", best_cost[0], " with permutation: ", best_perm[0])
+        return
+
+    lb = lower_bound(partial_perm, widths, data, best_cost[0])
+    if lb >= best_cost[0]:
+        return
+    for i in range(n):
+        if i not in partial_perm:
+            partial_perm.append(i)
+            branch_and_bound(partial_perm, widths, data, best_cost, best_perm)
+            partial_perm.pop()
+
+if __name__ == "__main__":
+    print("len(widths) =", len(widths))
+    print("len(data)   =", len(data))
+    print("row lens    =", [len(r) for r in data])
+    widths, data = load_data()
+    best_cost = [float('inf')]
+    best_perm = [None]
+    branch_and_bound([], widths, data, best_cost, best_perm)
+
+
+    print("\n✅ Best permutation:", best_perm[0])
+    print("✅ Best cost:", best_cost[0])
