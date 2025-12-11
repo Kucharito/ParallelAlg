@@ -1,0 +1,17 @@
+"""
+# TEST 2D MEAN SHIFT
+N = 200
+data = np.random.rand(N, 2) * 100
+
+R = 5
+h = R
+threshold = 0.01
+
+final_positions = np.zeros_like(data)
+
+for i in range(N):
+    final_positions[i] = mean_shift_point(data, data[i], R, h, threshold)
+
+print("First five final positions:")
+print(final_positions[:5])
+"""
