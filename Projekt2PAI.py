@@ -36,8 +36,8 @@ def find_clusters(final_positions, tolerance=2.0):
     return np.array(clusters), labels
 
 def main():
-    N, R, threshold, workers = 500, 10, 0.1, 5
-    np.random.seed(123)
+    N, R, threshold, workers = 500, 30, 1e-4, 5
+    np.random.seed(42)
     data = np.random.rand(N, 2) * 100
     original_data = data.copy()
 
@@ -46,25 +46,28 @@ def main():
     scat = ax.scatter(data[:, 0], data[:, 1], s=15, c='blue')
     ax.set_xlim(-5, 105)
     ax.set_ylim(-5, 105)
+    ax.set_title("Mean Shift - štart")
     plt.show()
+    plt.pause(1)
 
-    for iteration in range(100):
-        args = [(data, point, R) for point in data]
-        with Pool(workers) as pool:
-            new_positions = np.array(pool.map(mean_shift_step, args, chunksize=N//workers))
-        total_shift = np.sum(np.linalg.norm(new_positions - data, axis=1))
-        data = new_positions
-        scat.set_offsets(data)
-        ax.set_title(f"Mean Shift - Iterácia {iteration+1} (posun: {total_shift:.2f})")
+    # Každý bod konverguje samostatne (paralelne)
+    args = [(original_data, p, R, threshold) for p in original_data]
+    with Pool(workers) as pool:
+        final_positions = np.array(pool.starmap(mean_shift, args, chunksize=N//workers))
+
+    # Animácia - postupné zobrazenie konvergencie
+    for step in range(20):
+        t = (step + 1) / 20
+        interpolated = original_data + t * (final_positions - original_data)
+        scat.set_offsets(interpolated)
+        ax.set_title(f"Mean Shift - konvergencia {int(t*100)}%")
         plt.draw()
         plt.pause(0.1)
-        if total_shift < threshold:
-            break
 
     plt.ioff()
     plt.close()
 
-    centers, labels = find_clusters(data, tolerance=2.0)
+    centers, labels = find_clusters(final_positions, tolerance=2.0)
     print(f"Počet clusterov: {len(centers)}")
 
     plt.figure(figsize=(14, 6))
