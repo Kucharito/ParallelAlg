@@ -18,53 +18,36 @@ def load_data(path: str):
 
     return widths, data
 
-def cost(permutation, widths, data):
-    n = len(permutation)
-    centers = []
-    position = 0
-    for i in permutation:
-        position += widths[i]
-        centers.append(position - widths[i] / 2)
-    
-    total_cost = 0.0
-    for i in range(n):
-        for j in range(i + 1, n):
-            total_cost += data[permutation[i]][permutation[j]] * abs(centers[j] - centers[i])
-    return total_cost
-
-
-def partial_cost(partial_perm, widths, data):
-    n = len(partial_perm)
+def cost(perm, widths, data):
+    n = len(perm)
     if n < 2:
         return 0.0
     
-    # Vypočítaj centrá už umiestnených zariadení
+    # Vypočítaj centrá
     centers = []
     position = 0
-    for i in partial_perm:
+    for i in perm:
         position += widths[i]
         centers.append(position - widths[i] / 2)
-
-    # Spočítaj cenu len medzi zariadeniami v partial_perm
-    pcost = 0.0
+    
+    # Spočítaj cenu
+    total_cost = 0.0
     for i in range(n):
-        pi = partial_perm[i]
-        ci = centers[i]
         for j in range(i + 1, n):
-            pcost += data[pi][partial_perm[j]] * abs(centers[j] - ci)
-    return pcost
+            total_cost += data[perm[i]][perm[j]] * abs(centers[j] - centers[i])
+    return total_cost
 
 
 def lower_bound(partial_perm, widths, data):
     n = len(data)
     
-    if len(partial_perm) >= n - 1:
-        return partial_cost(partial_perm, widths, data)
+    if len(partial_perm) >= n:
+        return cost(partial_perm, widths, data)
     
     # Cena umiestnených zariadení
-    lb = partial_cost(partial_perm, widths, data)
+    lb = cost(partial_perm, widths, data)
     
-    # Hrubý dolný odhad pre zostávajúce zariadenia
+    # zostávajúce zariadenia
     placed_set = set(partial_perm)
     remaining = [i for i in range(n) if i not in placed_set]
     
@@ -111,8 +94,6 @@ def parallel_worker(start_device, widths, data, shared_best_cost, shared_best_pe
             if local_best_cost[0] < shared_best_cost.value:
                 shared_best_cost.value = local_best_cost[0]
                 perm = local_best_perm[0]
-                if perm[0] != max(perm):
-                    perm = perm[::-1]
                 shared_best_perm[:] = perm
                 print(f"Process {start_device}: New global best cost: {shared_best_cost.value:.2f}")
 
