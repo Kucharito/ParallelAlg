@@ -12,7 +12,7 @@ import time
 
 # Konfiguracia
 FILENAME = "web-BerkStan.txt"
-NUM_THREADS = 4
+NUM_THREADS = min(8, (os.cpu_count() or 4))
 DAMPING = 0.85
 THRESHOLD = 1e-6
 MAX_ITERATIONS = 100
@@ -63,28 +63,17 @@ def load_chunk(filename, start_pos, end_pos, graph):
 
     with open(filename, 'rb') as f:  # otvor subor v binarnom mode
         f.seek(start_pos)  # presun sa na zaciatok casti
-        if start_pos > 0:  # ak to nie je zaciatok suboru
-            f.readline()  # preskoc prvy (neuplny) riadok - uz ho nacitalo predchadzajuce vlakno
+        data = f.read(end_pos - start_pos)  # nacitaj celu cast naraz (rychlejsie)
 
-        while f.tell() < end_pos:  # kym sme v nasej casti suboru
-            line = f.readline()  # nacitaj riadok
-            if not line:  # ak je prazdny (koniec suboru)
-                break  # ukonci citanie
-
+    for line in data.splitlines():
+        if not line or line[0] == 35:  # 35 = '#'
+            continue
+        parts = line.split()
+        if len(parts) >= 2:
             try:
-                line = line.decode('utf-8').strip()  # dekoduj z bajtov na string a odstran biele znaky
-            except UnicodeDecodeError:  # ak sa neda dekodovat
-                continue  # preskoc tento riadok
-
-            if line.startswith('#') or not line:  # ak je to komentar alebo prazdny riadok
-                continue  # preskoc ho
-
-            parts = line.split()  # rozdel riadok na casti podla medzier
-            if len(parts) >= 2:  # ak ma aspon 2 casti (zdrojovy a cielovy vrchol)
-                try:
-                    edges.append((int(parts[0]), int(parts[1])))  # pridaj hranu ako tuple (od, do)
-                except ValueError:  # ak sa neda konvertovat na cislo
-                    continue  # preskoc tento riadok
+                edges.append((int(parts[0]), int(parts[1])))
+            except ValueError:
+                continue
 
     graph.add_edges_batch(edges)  # pridaj vsetky hrany do grafu (thread-safe)
     return len(edges)  # vrat pocet nacitanych hran
@@ -179,4 +168,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main()  # spusti hlavnu funkciu
